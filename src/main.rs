@@ -1,4 +1,6 @@
-use actix_web::{get, post, web, App, HttpServer, Responder};
+#[macro_use] extern crate log;
+extern crate env_logger;
+use actix_web::{get, post, web, App, HttpServer, Responder, middleware::Logger};
 use serde::{Deserialize, Serialize};
 use std::sync::{RwLock, Arc};
 
@@ -26,15 +28,21 @@ struct Context {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    std::env::set_var("RUST_LOG", "info");
+    env_logger::init();
+    info!("Starting server");
+
     let context = Context { peers: Arc::new(RwLock::new(vec![])) };
 
     HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
+            .wrap(Logger::new("%a %{User-Agent}i"))
             .data(context.clone())
             .service(peers)
             .service(add_peer)
     })
-        .bind("127.0.0.1:8080")?
+        .bind("0.0.0.0:8080")?
         .run()
         .await
 }
